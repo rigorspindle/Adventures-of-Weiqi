@@ -46,7 +46,11 @@ public class GoLessonSlideData
 
     [TextArea(3,10)]
     public string bodyText = string.Empty;
+    public GoLessonSlideBoardSource boardSource = GoLessonSlideBoardSource.JsonFile;
     public TextAsset boardJsonFile;
+    public int inlineBoardSize = GoLessonBoardJsonUtility.DefaultBoardSize;
+    public int inlineCurrentPlayer = 1;
+    public int[] inlineBoardFlat = new int[GoLessonBoardJsonUtility.DefaultBoardSize * GoLessonBoardJsonUtility.DefaultBoardSize];
 
     public bool correctYesAnswer = true;
     public int correctNumberAnswer = 0;
@@ -54,7 +58,8 @@ public class GoLessonSlideData
     public bool RequiresPuzzleCompletion => slideType == GoLessonSlideType.Puzzle;
     public bool UsesYesNoAnswer => slideType == GoLessonSlideType.YesNo;
     public bool UsesNumberAnswer => slideType == GoLessonSlideType.Number;
-    public bool HasBoardReference => boardJsonFile != null;
+    public bool UsesInlineGrid => boardSource == GoLessonSlideBoardSource.InlineGrid;
+    public bool HasBoardReference => UsesInlineGrid || boardJsonFile != null;
 
     public string GetDisplayName(int slideIndex)
     {
@@ -62,6 +67,35 @@ public class GoLessonSlideData
             return slideName;
 
         return $"Slide {slideIndex + 1}";
+    }
+
+    public void EnsureInlineBoardData()
+    {
+        int normalizedBoardSize = GoLessonBoardJsonUtility.ClampBoardSize(inlineBoardSize);
+        inlineBoardFlat = GoLessonBoardJsonUtility.ResizeBoardFlat(inlineBoardFlat,inlineBoardSize,normalizedBoardSize);
+        inlineBoardSize = normalizedBoardSize;
+        inlineCurrentPlayer = inlineCurrentPlayer == 2 ? 2 : 1;
+    }
+
+    public void ResizeInlineBoard(int newBoardSize)
+    {
+        EnsureInlineBoardData();
+        int normalizedBoardSize = GoLessonBoardJsonUtility.ClampBoardSize(newBoardSize);
+        inlineBoardFlat = GoLessonBoardJsonUtility.ResizeBoardFlat(inlineBoardFlat,inlineBoardSize,normalizedBoardSize);
+        inlineBoardSize = normalizedBoardSize;
+    }
+
+    public TextAsset GetBoardTextAsset()
+    {
+        if (!UsesInlineGrid)
+            return boardJsonFile;
+
+        EnsureInlineBoardData();
+
+        TextAsset runtimeBoardTextAsset = new TextAsset(GoLessonBoardJsonUtility.BuildJson(inlineBoardSize,inlineBoardFlat));
+        runtimeBoardTextAsset.name = string.IsNullOrWhiteSpace(slideName) ? "LessonInlineBoard" : $"{slideName}_InlineBoard";
+
+        return runtimeBoardTextAsset;
     }
 }
 

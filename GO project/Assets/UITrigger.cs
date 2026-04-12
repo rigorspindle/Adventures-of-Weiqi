@@ -22,6 +22,8 @@ public class UITrigger : MonoBehaviour
         {
             Debug.LogWarning("Canvas is not assigned in the Inspector on " + gameObject.name);
         }
+
+        
     }
 
     void Update ()
@@ -29,9 +31,25 @@ public class UITrigger : MonoBehaviour
         // Check if the UI is visible and the player presses the interaction key
         if (isUIVisible && Input.GetKeyDown(interactionKey))
         {
-            OnTrigger?.Invoke();
-            LoadScene();
+            Enter();
         }
+    }
+
+    void Enter()
+    {
+        OnTrigger?.Invoke();
+        LoadScene();
+    }
+
+    // Public wrapper so external UI buttons can invoke the same enter behavior.
+    public void TriggerFromButton()
+    {
+        if (!isUIVisible)
+        {
+            return;
+        }
+
+        Enter();
     }
 
     // Method to show the associated UI element

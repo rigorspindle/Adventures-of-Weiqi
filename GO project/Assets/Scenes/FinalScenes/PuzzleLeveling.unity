@@ -776,6 +776,65 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 492873242}
   m_CullTransparentMesh: 1
+--- !u!1 &522539607
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 522539608}
+  - component: {fileID: 522539609}
+  m_Layer: 0
+  m_Name: Annotations Manager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &522539608
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 522539607}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 959752703}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &522539609
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 522539607}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 40d7f0bf5db8482db4f0c1a27b6fd69a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  cubeGrid: {fileID: 1520261333}
+  targetCamera: {fileID: 1169587459}
+  annotationRoot: {fileID: 0}
+  annotationPrefab: {fileID: 1379734333678739583, guid: fade1611671bd464dac3fa98899eb19d, type: 3}
+  numberButton: {fileID: 0}
+  triangleButton: {fileID: 0}
+  squareButton: {fileID: 0}
+  cancelButton: {fileID: 0}
+  clearButton: {fileID: 0}
+  emptyPointHeight: 0.18
+  occupiedPointHeight: 0.62
+  startingNumber: 1
+  nextNumber: 1
+  autoIncrementNumbers: 1
+  resetNumberSequenceOnClear: 1
 --- !u!1 &622496714
 GameObject:
   m_ObjectHideFlags: 0
@@ -1825,6 +1884,7 @@ Transform:
   - {fileID: 225348956}
   - {fileID: 1520261332}
   - {fileID: 368165373}
+  - {fileID: 522539608}
   - {fileID: 1790969287}
   - {fileID: 1495251900}
   m_Father: {fileID: 0}

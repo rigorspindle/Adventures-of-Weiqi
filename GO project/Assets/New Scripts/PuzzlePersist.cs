@@ -250,7 +250,7 @@ public class PuzzlePersist : Singleton<PuzzlePersist>
         }
 
         GoLessonSlideData currentSlide = activeLessonData.slides[Mathf.Clamp(activeLessonSlideIndex,0,activeLessonData.slides.Count - 1)];
-        savedPuzzleData = currentSlide != null ? currentSlide.boardJsonFile : null;
+        savedPuzzleData = currentSlide != null ? currentSlide.GetBoardTextAsset() : null;
     }
 
     private void ResetFirstResultStates()

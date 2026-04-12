@@ -47,6 +47,7 @@ public class CubeGrid : MonoBehaviour
     public PresetMovesData CurrentPuzzleData => currentPuzzleData;
 
     public event Action OnGameOver;
+    public event Action OnGridInitialized;
 
     private bool playerTurn = true;
     private bool gameEnded = false;
@@ -221,6 +222,8 @@ public class CubeGrid : MonoBehaviour
             Debug.Log($"Grid initialized from sprite corners BL:{bottomLeft} TR:{topRight} size:{gridSize}x{gridSize}");
         else
             Debug.Log($"Grid initialized at {gridOrigin} with size: {gridSize}x{gridSize}");
+
+        OnGridInitialized?.Invoke();
     }
 
     private void ApplyBoardVisualForCurrentGridSize ()
@@ -702,6 +705,34 @@ public class CubeGrid : MonoBehaviour
         }
 
         return true;
+    }
+
+    public bool TryResolveGridTile(GameObject clickedObject,out GameObject gridTile)
+    {
+        gridTile = null;
+        if (clickedObject == null)
+            return false;
+
+        if (cubeObjects.Contains(clickedObject))
+        {
+            gridTile = clickedObject;
+            return true;
+        }
+
+        Transform current = clickedObject.transform.parent;
+        while (current != null)
+        {
+            GameObject currentObject = current.gameObject;
+            if (cubeObjects.Contains(currentObject))
+            {
+                gridTile = currentObject;
+                return true;
+            }
+
+            current = current.parent;
+        }
+
+        return false;
     }
 
     private string GetAIResponse ()

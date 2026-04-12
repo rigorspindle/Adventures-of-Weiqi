@@ -49,7 +49,7 @@ public class ClickManager : MonoBehaviour
 
     void Update ()
     {
-        if (!globalInputEnabled || cubeGrid == null || !cubeGrid.IsPlayerTurn())
+        if (!globalInputEnabled || GoBoardAnnotationController.IsAnnotationInputActive || cubeGrid == null || !cubeGrid.IsPlayerTurn())
         {
             return;
         }
@@ -59,7 +59,8 @@ public class ClickManager : MonoBehaviour
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
             if (Physics.Raycast(ray,out RaycastHit hit))
             {
-                GameObject clickedCube = hit.collider.gameObject;
+                if (!cubeGrid.TryResolveGridTile(hit.collider.gameObject,out GameObject clickedCube))
+                    return;
 
                 if (cubeGrid.CubeObjects.Contains(clickedCube))
                 {
