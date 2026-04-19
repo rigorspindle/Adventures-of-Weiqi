@@ -668,9 +668,9 @@ public class GoLessonBuilderWindow : EditorWindow
     {
         return boardValue switch
         {
-            1 => "●",
-            2 => "○",
-            _ => "·"
+            1 => "\u25CB",
+            2 => "\u25CF",
+            _ => "\u00B7"
         };
     }
 
@@ -679,9 +679,9 @@ public class GoLessonBuilderWindow : EditorWindow
         return annotationType switch
         {
             (int)GoLessonInlineAnnotationType.Number => annotationNumber.ToString(),
-            (int)GoLessonInlineAnnotationType.Triangle => "▲",
-            (int)GoLessonInlineAnnotationType.Square => "■",
-            _ => "·"
+            (int)GoLessonInlineAnnotationType.Triangle => "\u25B2",
+            (int)GoLessonInlineAnnotationType.Square => "\u25A0",
+            _ => "\u00B7"
         };
     }
 
