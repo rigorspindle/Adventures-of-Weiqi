@@ -3,6 +3,12 @@ using UnityEngine;
 
 public class GoBoardAnnotationMarker : MonoBehaviour
 {
+    private const string SolidTriangleSymbol = "\u25B2";
+    private const string OutlineSquareSymbol = "\u25A1";
+    private const string SolidSquareSymbol = "\u25A0";
+    private const string OutlineTriangleSymbol = "\u25B3";
+    private const string TriangleAsciiFallback = "^";
+
     public enum MarkerType
     {
         None = 0,
@@ -12,8 +18,13 @@ public class GoBoardAnnotationMarker : MonoBehaviour
     }
 
     [SerializeField] private TMP_Text annotationText;
-    [SerializeField] private string triangleSymbol = "\u25B3";
-    [SerializeField] private string squareSymbol = "\u25A1";
+    [Header("Optional Shape Visuals")]
+    [SerializeField] private GameObject triangleVisual;
+    [SerializeField] private GameObject squareVisual;
+
+    [Header("Text Fallbacks")]
+    [SerializeField] private string triangleSymbol = TriangleAsciiFallback;
+    [SerializeField] private string squareSymbol = OutlineSquareSymbol;
 
     public MarkerType CurrentMarkerType { get; private set; }
     public string CurrentLabel { get; private set; } = string.Empty;
@@ -22,20 +33,39 @@ public class GoBoardAnnotationMarker : MonoBehaviour
     {
         CurrentMarkerType = MarkerType.Number;
         CurrentLabel = label ?? string.Empty;
+        SetShapeVisualState(false,false);
         ApplyText(CurrentLabel);
     }
 
     public void SetTriangle()
     {
         CurrentMarkerType = MarkerType.Triangle;
-        CurrentLabel = triangleSymbol;
+        SetShapeVisualState(true,false);
+
+        if (triangleVisual != null)
+        {
+            CurrentLabel = string.Empty;
+            ApplyText(string.Empty);
+            return;
+        }
+
+        CurrentLabel = triangleSymbol ?? string.Empty;
         ApplyText(CurrentLabel);
     }
 
     public void SetSquare()
     {
         CurrentMarkerType = MarkerType.Square;
-        CurrentLabel = squareSymbol;
+        SetShapeVisualState(false,true);
+
+        if (squareVisual != null)
+        {
+            CurrentLabel = string.Empty;
+            ApplyText(string.Empty);
+            return;
+        }
+
+        CurrentLabel = squareSymbol ?? string.Empty;
         ApplyText(CurrentLabel);
     }
 
@@ -43,6 +73,7 @@ public class GoBoardAnnotationMarker : MonoBehaviour
     {
         CurrentMarkerType = MarkerType.None;
         CurrentLabel = string.Empty;
+        SetShapeVisualState(false,false);
         ApplyText(string.Empty);
     }
 
@@ -52,6 +83,28 @@ public class GoBoardAnnotationMarker : MonoBehaviour
             annotationText = GetComponentInChildren<TMP_Text>(true);
 
         ClearMarker();
+    }
+
+    private void OnValidate()
+    {
+        if (string.IsNullOrWhiteSpace(triangleSymbol) ||
+            triangleSymbol == SolidTriangleSymbol ||
+            triangleSymbol == OutlineTriangleSymbol)
+        {
+            triangleSymbol = TriangleAsciiFallback;
+        }
+
+        if (string.IsNullOrWhiteSpace(squareSymbol) || squareSymbol == SolidSquareSymbol)
+            squareSymbol = OutlineSquareSymbol;
+    }
+
+    private void SetShapeVisualState(bool showTriangle,bool showSquare)
+    {
+        if (triangleVisual != null)
+            triangleVisual.SetActive(showTriangle);
+
+        if (squareVisual != null)
+            squareVisual.SetActive(showSquare);
     }
 
     private void ApplyText(string value)

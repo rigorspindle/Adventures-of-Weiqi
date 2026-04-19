@@ -171,7 +171,7 @@ MonoBehaviour:
   m_SourceFontFileGUID: 235b0a4a6c7d89143a49f322cbbb77aa
   m_SourceFontFile_EditorRef: {fileID: 12800000, guid: 235b0a4a6c7d89143a49f322cbbb77aa, type: 3}
   m_SourceFontFile: {fileID: 0}
-  m_AtlasPopulationMode: 0
+  m_AtlasPopulationMode: 1
   m_FaceInfo:
     m_FaceIndex: 0
     m_FamilyName: Liberation Sans
@@ -2080,7 +2080,7 @@ MonoBehaviour:
   m_AtlasTextures:
   - {fileID: -1445741094929518603}
   m_AtlasTextureIndex: 0
-  m_IsMultiAtlasTexturesEnabled: 0
+  m_IsMultiAtlasTexturesEnabled: 1
   m_ClearDynamicDataOnBuild: 0
   m_UsedGlyphRects:
   - m_X: 0

@@ -25,6 +25,8 @@ public class GoBoardAnnotationController : MonoBehaviour
     [SerializeField] private Button squareButton;
     [SerializeField] private Button cancelButton;
     [SerializeField] private Button clearButton;
+    [SerializeField] private Color inactiveToolButtonColor = Color.white;
+    [SerializeField] private Color activeToolButtonColor = new Color(0.55f,0.85f,1f,1f);
 
     [Header("Placement")]
     [Min(0f)] [SerializeField] private float emptyPointHeight = 0.18f;
@@ -46,7 +48,7 @@ public class GoBoardAnnotationController : MonoBehaviour
         ResolveReferences();
         EnsureAnnotationRoot();
         ResetNumberSequence();
-        UpdateInputCaptureState();
+        SetCurrentTool(AnnotationTool.None);
     }
 
     private void OnEnable()
@@ -59,6 +61,7 @@ public class GoBoardAnnotationController : MonoBehaviour
             cubeGrid.OnGridInitialized += HandleGridInitialized;
 
         UpdateInputCaptureState();
+        UpdateToolButtonVisuals();
     }
 
     private void OnDisable()
@@ -68,8 +71,7 @@ public class GoBoardAnnotationController : MonoBehaviour
         if (cubeGrid != null)
             cubeGrid.OnGridInitialized -= HandleGridInitialized;
 
-        CurrentTool = AnnotationTool.None;
-        UpdateInputCaptureState();
+        SetCurrentTool(AnnotationTool.None);
     }
 
     private void Update()
@@ -91,26 +93,22 @@ public class GoBoardAnnotationController : MonoBehaviour
 
     public void ActivateNumberTool()
     {
-        CurrentTool = AnnotationTool.Number;
-        UpdateInputCaptureState();
+        SetCurrentTool(AnnotationTool.Number);
     }
 
     public void ActivateTriangleTool()
     {
-        CurrentTool = AnnotationTool.Triangle;
-        UpdateInputCaptureState();
+        SetCurrentTool(AnnotationTool.Triangle);
     }
 
     public void ActivateSquareTool()
     {
-        CurrentTool = AnnotationTool.Square;
-        UpdateInputCaptureState();
+        SetCurrentTool(AnnotationTool.Square);
     }
 
     public void CancelAnnotationTool()
     {
-        CurrentTool = AnnotationTool.None;
-        UpdateInputCaptureState();
+        SetCurrentTool(AnnotationTool.None);
     }
 
     public void ClearAnnotations()
@@ -196,6 +194,28 @@ public class GoBoardAnnotationController : MonoBehaviour
         IsAnnotationInputActive = CurrentTool != AnnotationTool.None;
     }
 
+    private void SetCurrentTool(AnnotationTool tool)
+    {
+        CurrentTool = tool;
+        UpdateInputCaptureState();
+        UpdateToolButtonVisuals();
+    }
+
+    private void UpdateToolButtonVisuals()
+    {
+        ApplyToolButtonVisual(numberButton,CurrentTool == AnnotationTool.Number);
+        ApplyToolButtonVisual(triangleButton,CurrentTool == AnnotationTool.Triangle);
+        ApplyToolButtonVisual(squareButton,CurrentTool == AnnotationTool.Square);
+    }
+
+    private void ApplyToolButtonVisual(Button button,bool isActive)
+    {
+        if (button == null || button.targetGraphic == null)
+            return;
+
+        button.targetGraphic.color = isActive ? activeToolButtonColor : inactiveToolButtonColor;
+    }
+
     private void HandleGridInitialized()
     {
         ClearAnnotations();
@@ -211,10 +231,23 @@ public class GoBoardAnnotationController : MonoBehaviour
             return false;
 
         Ray ray = activeCamera.ScreenPointToRay(Input.mousePosition);
-        if (!Physics.Raycast(ray,out RaycastHit hit))
+        RaycastHit[] hits = Physics.RaycastAll(ray);
+        if (hits == null || hits.Length == 0)
             return false;
 
-        return cubeGrid.TryResolveGridTile(hit.collider.gameObject,out gridTile);
+        System.Array.Sort(hits,(a,b) => a.distance.CompareTo(b.distance));
+
+        for (int i = 0; i < hits.Length; i++)
+        {
+            Collider hitCollider = hits[i].collider;
+            if (hitCollider == null)
+                continue;
+
+            if (cubeGrid.TryResolveGridTile(hitCollider.gameObject,out gridTile))
+                return true;
+        }
+
+        return false;
     }
 
     private void ApplyCurrentAnnotation(GameObject gridTile)
