@@ -46,11 +46,13 @@ public class GoLessonSlideData
 
     [TextArea(3,10)]
     public string bodyText = string.Empty;
-    public GoLessonSlideBoardSource boardSource = GoLessonSlideBoardSource.JsonFile;
+    public GoLessonSlideBoardSource boardSource = GoLessonSlideBoardSource.InlineGrid;
     public TextAsset boardJsonFile;
     public int inlineBoardSize = GoLessonBoardJsonUtility.DefaultBoardSize;
     public int inlineCurrentPlayer = 1;
     public int[] inlineBoardFlat = new int[GoLessonBoardJsonUtility.DefaultBoardSize * GoLessonBoardJsonUtility.DefaultBoardSize];
+    public int[] inlineAnnotationTypeFlat = new int[GoLessonBoardJsonUtility.DefaultBoardSize * GoLessonBoardJsonUtility.DefaultBoardSize];
+    public int[] inlineAnnotationNumberFlat = new int[GoLessonBoardJsonUtility.DefaultBoardSize * GoLessonBoardJsonUtility.DefaultBoardSize];
 
     public bool correctYesAnswer = true;
     public int correctNumberAnswer = 0;
@@ -73,6 +75,8 @@ public class GoLessonSlideData
     {
         int normalizedBoardSize = GoLessonBoardJsonUtility.ClampBoardSize(inlineBoardSize);
         inlineBoardFlat = GoLessonBoardJsonUtility.ResizeBoardFlat(inlineBoardFlat,inlineBoardSize,normalizedBoardSize);
+        inlineAnnotationTypeFlat = GoLessonBoardJsonUtility.ResizeAnnotationTypeFlat(inlineAnnotationTypeFlat,inlineBoardSize,normalizedBoardSize);
+        inlineAnnotationNumberFlat = GoLessonBoardJsonUtility.ResizeAnnotationNumberFlat(inlineAnnotationNumberFlat,inlineBoardSize,normalizedBoardSize);
         inlineBoardSize = normalizedBoardSize;
         inlineCurrentPlayer = inlineCurrentPlayer == 2 ? 2 : 1;
     }
@@ -82,6 +86,8 @@ public class GoLessonSlideData
         EnsureInlineBoardData();
         int normalizedBoardSize = GoLessonBoardJsonUtility.ClampBoardSize(newBoardSize);
         inlineBoardFlat = GoLessonBoardJsonUtility.ResizeBoardFlat(inlineBoardFlat,inlineBoardSize,normalizedBoardSize);
+        inlineAnnotationTypeFlat = GoLessonBoardJsonUtility.ResizeAnnotationTypeFlat(inlineAnnotationTypeFlat,inlineBoardSize,normalizedBoardSize);
+        inlineAnnotationNumberFlat = GoLessonBoardJsonUtility.ResizeAnnotationNumberFlat(inlineAnnotationNumberFlat,inlineBoardSize,normalizedBoardSize);
         inlineBoardSize = normalizedBoardSize;
     }
 
@@ -92,7 +98,7 @@ public class GoLessonSlideData
 
         EnsureInlineBoardData();
 
-        TextAsset runtimeBoardTextAsset = new TextAsset(GoLessonBoardJsonUtility.BuildJson(inlineBoardSize,inlineBoardFlat));
+        TextAsset runtimeBoardTextAsset = new TextAsset(GoLessonBoardJsonUtility.BuildJson(inlineBoardSize,inlineBoardFlat,inlineAnnotationTypeFlat,inlineAnnotationNumberFlat));
         runtimeBoardTextAsset.name = string.IsNullOrWhiteSpace(slideName) ? "LessonInlineBoard" : $"{slideName}_InlineBoard";
 
         return runtimeBoardTextAsset;

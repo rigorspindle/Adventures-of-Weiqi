@@ -1827,6 +1827,7 @@ Transform:
   - {fileID: 368165373}
   - {fileID: 1790969287}
   - {fileID: 1495251900}
+  - {fileID: 1171596001}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1043002595
@@ -2245,6 +2246,67 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 90, y: 0, z: 0}
+--- !u!1 &1171596000
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1171596001}
+  - component: {fileID: 1171596002}
+  m_Layer: 0
+  m_Name: Annotations Manager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1171596001
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1171596000}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 959752703}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1171596002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1171596000}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 40d7f0bf5db8482db4f0c1a27b6fd69a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  cubeGrid: {fileID: 1520261333}
+  targetCamera: {fileID: 1169587459}
+  annotationRoot: {fileID: 0}
+  annotationPrefab: {fileID: 1379734333678739583, guid: fade1611671bd464dac3fa98899eb19d, type: 3}
+  numberButton: {fileID: 0}
+  triangleButton: {fileID: 0}
+  squareButton: {fileID: 0}
+  cancelButton: {fileID: 0}
+  clearButton: {fileID: 0}
+  inactiveToolButtonColor: {r: 1, g: 1, b: 1, a: 1}
+  activeToolButtonColor: {r: 0.55, g: 0.85, b: 1, a: 1}
+  emptyPointHeight: 0.18
+  occupiedPointHeight: 0.62
+  startingNumber: 1
+  nextNumber: 1
+  autoIncrementNumbers: 1
+  resetNumberSequenceOnClear: 1
 --- !u!1 &1213010327
 GameObject:
   m_ObjectHideFlags: 0
@@ -3180,6 +3242,7 @@ MonoBehaviour:
   captureManager: {fileID: 1520261334}
   gameManager: {fileID: 225348955}
   conditionManager: {fileID: 1520261335}
+  boardAnnotationController: {fileID: 1171596002}
   illegalMoves: []
 --- !u!114 &1520261334
 MonoBehaviour:

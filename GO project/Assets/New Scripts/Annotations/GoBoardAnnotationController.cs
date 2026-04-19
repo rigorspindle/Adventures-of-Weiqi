@@ -125,6 +125,34 @@ public class GoBoardAnnotationController : MonoBehaviour
             ResetNumberSequence();
     }
 
+    public void ApplySerializedAnnotations(List<CubeGrid.AnnotationData> serializedAnnotations)
+    {
+        ClearAnnotations();
+
+        if (serializedAnnotations == null || serializedAnnotations.Count == 0)
+        {
+            SetCurrentTool(AnnotationTool.None);
+            return;
+        }
+
+        ResolveReferences();
+        EnsureAnnotationRoot();
+
+        for (int i = 0; i < serializedAnnotations.Count; i++)
+        {
+            CubeGrid.AnnotationData annotation = serializedAnnotations[i];
+            if (annotation == null)
+                continue;
+
+            if (!TryGetGridTileByBoardCoordinate(annotation.row,annotation.col,out GameObject gridTile))
+                continue;
+
+            ApplySerializedAnnotationToTile(gridTile,annotation.annotationType,annotation.numberValue);
+        }
+
+        SetCurrentTool(AnnotationTool.None);
+    }
+
     public void SetNextNumber(int value)
     {
         nextNumber = Mathf.Max(0,value);
@@ -222,6 +250,31 @@ public class GoBoardAnnotationController : MonoBehaviour
         CancelAnnotationTool();
     }
 
+    private bool TryGetGridTileByBoardCoordinate(int row,int col,out GameObject gridTile)
+    {
+        gridTile = null;
+
+        if (cubeGrid == null || row < 1 || col < 1)
+            return false;
+
+        List<GameObject> tiles = cubeGrid.CubeObjects;
+        if (tiles == null || tiles.Count == 0)
+            return false;
+
+        string tileName = $"({row},{col})";
+        for (int i = 0; i < tiles.Count; i++)
+        {
+            GameObject tile = tiles[i];
+            if (tile != null && tile.name == tileName)
+            {
+                gridTile = tile;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private bool TryGetClickedGridTile(out GameObject gridTile)
     {
         gridTile = null;
@@ -268,6 +321,51 @@ public class GoBoardAnnotationController : MonoBehaviour
                 marker.SetNumber(nextNumber.ToString());
                 if (autoIncrementNumbers)
                     nextNumber++;
+                break;
+
+            case AnnotationTool.Triangle:
+                marker.SetTriangle();
+                break;
+
+            case AnnotationTool.Square:
+                marker.SetSquare();
+                break;
+        }
+    }
+
+    private void ApplySerializedAnnotationToTile(GameObject gridTile,int annotationTypeValue,int numberValue)
+    {
+        if (annotationPrefab == null)
+        {
+            Debug.LogWarning("GoBoardAnnotationController: No annotation prefab assigned.");
+            return;
+        }
+
+        AnnotationTool annotationTool = AnnotationTool.None;
+        switch (annotationTypeValue)
+        {
+            case 1:
+                annotationTool = AnnotationTool.Number;
+                break;
+            case 2:
+                annotationTool = AnnotationTool.Triangle;
+                break;
+            case 3:
+                annotationTool = AnnotationTool.Square;
+                break;
+        }
+
+        if (annotationTool == AnnotationTool.None)
+            return;
+
+        string tileName = gridTile.name;
+        Vector3 markerPosition = GetMarkerPosition(gridTile,tileName);
+        GoBoardAnnotationMarker marker = GetOrCreateMarker(tileName,markerPosition);
+
+        switch (annotationTool)
+        {
+            case AnnotationTool.Number:
+                marker.SetNumber(Mathf.Max(0,numberValue).ToString());
                 break;
 
             case AnnotationTool.Triangle:

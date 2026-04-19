@@ -16,6 +16,8 @@ public class GoLessonBuilderWindow : EditorWindow
     private const string SlideInlineBoardSizeProperty = "inlineBoardSize";
     private const string SlideInlineCurrentPlayerProperty = "inlineCurrentPlayer";
     private const string SlideInlineBoardFlatProperty = "inlineBoardFlat";
+    private const string SlideInlineAnnotationTypeFlatProperty = "inlineAnnotationTypeFlat";
+    private const string SlideInlineAnnotationNumberFlatProperty = "inlineAnnotationNumberFlat";
     private const string SlideCorrectYesProperty = "correctYesAnswer";
     private const string SlideCorrectNumberProperty = "correctNumberAnswer";
 
@@ -28,6 +30,8 @@ public class GoLessonBuilderWindow : EditorWindow
     private GoLessonData selectedLesson;
     private SerializedObject serializedLesson;
     private Vector2 scrollPosition;
+    private GoLessonInlineAnnotationType inlineAnnotationPaintTool = GoLessonInlineAnnotationType.Triangle;
+    private int inlineAnnotationPaintNumber = 1;
 
     [MenuItem("Tools/Go Lesson Builder")]
     public static void OpenWindow()
@@ -280,7 +284,7 @@ public class GoLessonBuilderWindow : EditorWindow
 
         EditorGUILayout.BeginHorizontal();
         GUILayout.FlexibleSpace();
-        if (GUILayout.Button("Copy Board To Inline Grid",GUILayout.Width(180f)))
+        if (GUILayout.Button("Copy Board + Annotations To Inline Grid",GUILayout.Width(260f)))
             CopyJsonBoardToInlineGrid(slideProperty,parsedBoard);
         EditorGUILayout.EndHorizontal();
 
@@ -288,6 +292,8 @@ public class GoLessonBuilderWindow : EditorWindow
             EditorGUILayout.HelpBox("This JSON only contains board state. Puzzle slides still need preset move data to behave like a puzzle.",MessageType.Warning);
         else if (parsedBoard.HasMoves)
             EditorGUILayout.HelpBox($"This JSON includes {parsedBoard.moves.Count} move group(s). File mode preserves that puzzle data.",MessageType.Info);
+        if (parsedBoard.HasAnnotations)
+            EditorGUILayout.HelpBox($"This JSON includes {parsedBoard.annotations.Count} annotation(s).",MessageType.Info);
 
         EditorGUILayout.LabelField($"Board Preview ({parsedBoard.boardSize}x{parsedBoard.boardSize})",EditorStyles.miniBoldLabel);
         DrawReadOnlyBoardGrid(parsedBoard.boardSize,parsedBoard.boardFlat);
@@ -298,9 +304,11 @@ public class GoLessonBuilderWindow : EditorWindow
         SerializedProperty inlineBoardSize = slideProperty.FindPropertyRelative(SlideInlineBoardSizeProperty);
         SerializedProperty inlineCurrentPlayer = slideProperty.FindPropertyRelative(SlideInlineCurrentPlayerProperty);
         SerializedProperty inlineBoardFlat = slideProperty.FindPropertyRelative(SlideInlineBoardFlatProperty);
+        SerializedProperty inlineAnnotationTypeFlat = slideProperty.FindPropertyRelative(SlideInlineAnnotationTypeFlatProperty);
+        SerializedProperty inlineAnnotationNumberFlat = slideProperty.FindPropertyRelative(SlideInlineAnnotationNumberFlatProperty);
         string visibilityKey = GetInlineGridVisibilityKey(slideProperty.propertyPath);
 
-        EnsureInlineBoardData(inlineBoardSize,inlineCurrentPlayer,inlineBoardFlat);
+        EnsureInlineBoardData(inlineBoardSize,inlineCurrentPlayer,inlineBoardFlat,inlineAnnotationTypeFlat,inlineAnnotationNumberFlat);
 
         bool isGridVisible = GetInlineGridVisibilityState(visibilityKey);
 
@@ -316,16 +324,18 @@ public class GoLessonBuilderWindow : EditorWindow
 
         if (!isGridVisible)
         {
-            EditorGUILayout.HelpBox($"Board Size: {inlineBoardSize.intValue}x{inlineBoardSize.intValue}\nCurrent Player: {(inlineCurrentPlayer.intValue == 1 ? "Black" : "White")}",MessageType.None);
+            EditorGUILayout.HelpBox(
+                $"Board Size: {inlineBoardSize.intValue}x{inlineBoardSize.intValue}\nCurrent Player: {(inlineCurrentPlayer.intValue == 1 ? "Black" : "White")}\nAnnotations: {GetInlineAnnotationCount(inlineAnnotationTypeFlat)}",
+                MessageType.None);
             if (slideType == GoLessonSlideType.Puzzle)
-                EditorGUILayout.HelpBox("Inline Grid still only stores board stones. Switch this slide back to Json File if it needs preset puzzle move data.",MessageType.Warning);
+                EditorGUILayout.HelpBox("Inline Grid stores board + annotations but not preset puzzle move trees. Switch this slide back to Json File if it needs move data.",MessageType.Warning);
             return;
         }
 
         int currentBoardSize = inlineBoardSize.intValue;
         int newBoardSize = EditorGUILayout.IntSlider("Board Size",currentBoardSize,GoLessonBoardJsonUtility.MinBoardSize,GoLessonBoardJsonUtility.MaxBoardSize);
         if (newBoardSize != currentBoardSize)
-            ResizeInlineBoard(inlineBoardSize,inlineBoardFlat,newBoardSize);
+            ResizeInlineBoard(inlineBoardSize,inlineBoardFlat,inlineAnnotationTypeFlat,inlineAnnotationNumberFlat,newBoardSize);
 
         EditorGUILayout.BeginHorizontal();
         if (GUILayout.Button("Switch Player",GUILayout.Width(110f)))
@@ -335,9 +345,11 @@ public class GoLessonBuilderWindow : EditorWindow
 
         EditorGUILayout.HelpBox("Storage matches runtime: boardFlat[0] = bottom row, left column. Bottom-left is (1,1).",MessageType.Info);
         if (slideType == GoLessonSlideType.Puzzle)
-            EditorGUILayout.HelpBox("Inline Grid stores only the board stones. Switch this slide back to Json File if it needs preset puzzle move data.",MessageType.Warning);
+            EditorGUILayout.HelpBox("Inline Grid stores board + annotations but not preset puzzle move trees. Switch this slide back to Json File if it needs move data.",MessageType.Warning);
 
         DrawEditableBoardGrid(inlineBoardSize.intValue,inlineBoardFlat,inlineCurrentPlayer.intValue);
+        GUILayout.Space(8f);
+        DrawEditableAnnotationGrid(inlineBoardSize.intValue,inlineAnnotationTypeFlat,inlineAnnotationNumberFlat);
     }
 
     private void DrawEditableBoardGrid(int boardSize,SerializedProperty boardFlat,int currentPlayer)
@@ -358,6 +370,45 @@ public class GoLessonBuilderWindow : EditorWindow
 
                 if (GUILayout.Button(cellContent,GUILayout.Width(BoardCellSize),GUILayout.Height(BoardCellSize)))
                     boardCell.intValue = currentValue == 0 ? currentPlayer : 0;
+            }
+
+            EditorGUILayout.EndHorizontal();
+        }
+
+        DrawBoardColumnLabels(boardSize);
+    }
+
+    private void DrawEditableAnnotationGrid(int boardSize,SerializedProperty annotationTypeFlat,SerializedProperty annotationNumberFlat)
+    {
+        EditorGUILayout.LabelField("Inline Annotations",EditorStyles.miniBoldLabel);
+        inlineAnnotationPaintTool = (GoLessonInlineAnnotationType)EditorGUILayout.EnumPopup("Annotation Tool",inlineAnnotationPaintTool);
+        if (inlineAnnotationPaintTool == GoLessonInlineAnnotationType.Number)
+            inlineAnnotationPaintNumber = Mathf.Max(0,EditorGUILayout.IntField("Number Value",inlineAnnotationPaintNumber));
+
+        EditorGUILayout.BeginHorizontal();
+        if (GUILayout.Button("Clear All Annotations",GUILayout.Width(150f)))
+            ClearAllAnnotations(annotationTypeFlat,annotationNumberFlat);
+        EditorGUILayout.LabelField("Click a cell to paint the selected annotation. Use `None` to erase.",EditorStyles.miniLabel);
+        EditorGUILayout.EndHorizontal();
+
+        DrawBoardColumnLabels(boardSize);
+
+        for (int y = boardSize - 1; y >= 0; y--)
+        {
+            EditorGUILayout.BeginHorizontal();
+            GUILayout.Label((y + 1).ToString(),GUILayout.Width(BoardLabelWidth),GUILayout.Height(BoardCellSize));
+
+            for (int x = 0; x < boardSize; x++)
+            {
+                int index = y * boardSize + x;
+                SerializedProperty typeCell = annotationTypeFlat.GetArrayElementAtIndex(index);
+                SerializedProperty numberCell = annotationNumberFlat.GetArrayElementAtIndex(index);
+                int currentType = GoLessonBoardJsonUtility.ClampAnnotationType(typeCell.intValue);
+                int currentNumber = Mathf.Max(0,numberCell.intValue);
+
+                GUIContent cellContent = new(GetAnnotationLabel(currentType,currentNumber),$"(row,col)=({y + 1},{x + 1})");
+                if (GUILayout.Button(cellContent,GUILayout.Width(BoardCellSize),GUILayout.Height(BoardCellSize)))
+                    ApplyAnnotationBrushToCell(typeCell,numberCell,currentType,currentNumber);
             }
 
             EditorGUILayout.EndHorizontal();
@@ -406,41 +457,93 @@ public class GoLessonBuilderWindow : EditorWindow
         SerializedProperty inlineBoardSize = slideProperty.FindPropertyRelative(SlideInlineBoardSizeProperty);
         SerializedProperty inlineCurrentPlayer = slideProperty.FindPropertyRelative(SlideInlineCurrentPlayerProperty);
         SerializedProperty inlineBoardFlat = slideProperty.FindPropertyRelative(SlideInlineBoardFlatProperty);
+        SerializedProperty inlineAnnotationTypeFlat = slideProperty.FindPropertyRelative(SlideInlineAnnotationTypeFlatProperty);
+        SerializedProperty inlineAnnotationNumberFlat = slideProperty.FindPropertyRelative(SlideInlineAnnotationNumberFlatProperty);
 
         int normalizedBoardSize = GoLessonBoardJsonUtility.ClampBoardSize(parsedBoard.boardSize);
         inlineBoardSize.intValue = normalizedBoardSize;
         inlineCurrentPlayer.intValue = 1;
         ResizeBoardArray(inlineBoardFlat,GuessBoardSizeFromArraySize(inlineBoardFlat.arraySize,normalizedBoardSize),normalizedBoardSize);
+        ResizeAnnotationTypeArray(inlineAnnotationTypeFlat,GuessBoardSizeFromArraySize(inlineAnnotationTypeFlat.arraySize,normalizedBoardSize),normalizedBoardSize);
+        ResizeAnnotationNumberArray(inlineAnnotationNumberFlat,GuessBoardSizeFromArraySize(inlineAnnotationNumberFlat.arraySize,normalizedBoardSize),normalizedBoardSize);
 
         for (int i = 0; i < inlineBoardFlat.arraySize; i++)
         {
             int value = i < parsedBoard.boardFlat.Length ? parsedBoard.boardFlat[i] : 0;
             inlineBoardFlat.GetArrayElementAtIndex(i).intValue = Mathf.Clamp(value,0,2);
+            inlineAnnotationTypeFlat.GetArrayElementAtIndex(i).intValue = 0;
+            inlineAnnotationNumberFlat.GetArrayElementAtIndex(i).intValue = 0;
+        }
+
+        if (parsedBoard.annotations != null)
+        {
+            for (int i = 0; i < parsedBoard.annotations.Count; i++)
+            {
+                GoLessonPuzzleJsonAnnotation annotation = parsedBoard.annotations[i];
+                if (annotation == null)
+                    continue;
+
+                int row = annotation.row - 1;
+                int col = annotation.col - 1;
+                if (row < 0 || col < 0 || row >= normalizedBoardSize || col >= normalizedBoardSize)
+                    continue;
+
+                int index = row * normalizedBoardSize + col;
+                int annotationType = GoLessonBoardJsonUtility.ClampAnnotationType(annotation.annotationType);
+                inlineAnnotationTypeFlat.GetArrayElementAtIndex(index).intValue = annotationType;
+                inlineAnnotationNumberFlat.GetArrayElementAtIndex(index).intValue = annotationType == (int)GoLessonInlineAnnotationType.Number
+                    ? Mathf.Max(0,annotation.numberValue)
+                    : 0;
+            }
         }
 
         boardSource.enumValueIndex = (int)GoLessonSlideBoardSource.InlineGrid;
     }
 
-    private void EnsureInlineBoardData(SerializedProperty inlineBoardSize,SerializedProperty inlineCurrentPlayer,SerializedProperty inlineBoardFlat)
+    private void EnsureInlineBoardData(
+        SerializedProperty inlineBoardSize,
+        SerializedProperty inlineCurrentPlayer,
+        SerializedProperty inlineBoardFlat,
+        SerializedProperty inlineAnnotationTypeFlat,
+        SerializedProperty inlineAnnotationNumberFlat)
     {
         int normalizedBoardSize = GuessBoardSizeFromArraySize(inlineBoardFlat.arraySize,inlineBoardSize.intValue);
         normalizedBoardSize = GoLessonBoardJsonUtility.ClampBoardSize(normalizedBoardSize);
+        int expectedArraySize = normalizedBoardSize * normalizedBoardSize;
 
-        if (inlineBoardSize.intValue != normalizedBoardSize || inlineBoardFlat.arraySize != normalizedBoardSize * normalizedBoardSize)
+        if (inlineBoardSize.intValue != normalizedBoardSize || inlineBoardFlat.arraySize != expectedArraySize)
         {
             ResizeBoardArray(inlineBoardFlat,GuessBoardSizeFromArraySize(inlineBoardFlat.arraySize,normalizedBoardSize),normalizedBoardSize);
+            ResizeAnnotationTypeArray(inlineAnnotationTypeFlat,GuessBoardSizeFromArraySize(inlineAnnotationTypeFlat.arraySize,normalizedBoardSize),normalizedBoardSize);
+            ResizeAnnotationNumberArray(inlineAnnotationNumberFlat,GuessBoardSizeFromArraySize(inlineAnnotationNumberFlat.arraySize,normalizedBoardSize),normalizedBoardSize);
             inlineBoardSize.intValue = normalizedBoardSize;
+        }
+        else
+        {
+            if (inlineAnnotationTypeFlat.arraySize != expectedArraySize)
+                ResizeAnnotationTypeArray(inlineAnnotationTypeFlat,GuessBoardSizeFromArraySize(inlineAnnotationTypeFlat.arraySize,normalizedBoardSize),normalizedBoardSize);
+
+            if (inlineAnnotationNumberFlat.arraySize != expectedArraySize)
+                ResizeAnnotationNumberArray(inlineAnnotationNumberFlat,GuessBoardSizeFromArraySize(inlineAnnotationNumberFlat.arraySize,normalizedBoardSize),normalizedBoardSize);
         }
 
         inlineCurrentPlayer.intValue = inlineCurrentPlayer.intValue == 2 ? 2 : 1;
         ClampBoardArrayValues(inlineBoardFlat);
+        ClampAnnotationArrayValues(inlineAnnotationTypeFlat,inlineAnnotationNumberFlat);
     }
 
-    private void ResizeInlineBoard(SerializedProperty inlineBoardSize,SerializedProperty inlineBoardFlat,int newBoardSize)
+    private void ResizeInlineBoard(
+        SerializedProperty inlineBoardSize,
+        SerializedProperty inlineBoardFlat,
+        SerializedProperty inlineAnnotationTypeFlat,
+        SerializedProperty inlineAnnotationNumberFlat,
+        int newBoardSize)
     {
         int oldBoardSize = GuessBoardSizeFromArraySize(inlineBoardFlat.arraySize,inlineBoardSize.intValue);
         int normalizedBoardSize = GoLessonBoardJsonUtility.ClampBoardSize(newBoardSize);
         ResizeBoardArray(inlineBoardFlat,oldBoardSize,normalizedBoardSize);
+        ResizeAnnotationTypeArray(inlineAnnotationTypeFlat,oldBoardSize,normalizedBoardSize);
+        ResizeAnnotationNumberArray(inlineAnnotationNumberFlat,oldBoardSize,normalizedBoardSize);
         inlineBoardSize.intValue = normalizedBoardSize;
     }
 
@@ -481,6 +584,77 @@ public class GoLessonBuilderWindow : EditorWindow
         }
     }
 
+    private void ResizeAnnotationTypeArray(SerializedProperty annotationTypeFlat,int oldBoardSize,int newBoardSize)
+    {
+        int[] cachedValues = new int[annotationTypeFlat.arraySize];
+        for (int i = 0; i < annotationTypeFlat.arraySize; i++)
+            cachedValues[i] = GoLessonBoardJsonUtility.ClampAnnotationType(annotationTypeFlat.GetArrayElementAtIndex(i).intValue);
+
+        int normalizedOldBoardSize = oldBoardSize > 0 ? GoLessonBoardJsonUtility.ClampBoardSize(oldBoardSize) : 0;
+        int normalizedNewBoardSize = GoLessonBoardJsonUtility.ClampBoardSize(newBoardSize);
+        int copySize = normalizedOldBoardSize > 0 ? Mathf.Min(normalizedOldBoardSize,normalizedNewBoardSize) : 0;
+
+        annotationTypeFlat.arraySize = normalizedNewBoardSize * normalizedNewBoardSize;
+        for (int i = 0; i < annotationTypeFlat.arraySize; i++)
+            annotationTypeFlat.GetArrayElementAtIndex(i).intValue = 0;
+
+        for (int y = 0; y < copySize; y++)
+        {
+            for (int x = 0; x < copySize; x++)
+            {
+                int sourceIndex = y * normalizedOldBoardSize + x;
+                if (sourceIndex < 0 || sourceIndex >= cachedValues.Length)
+                    continue;
+
+                int destinationIndex = y * normalizedNewBoardSize + x;
+                annotationTypeFlat.GetArrayElementAtIndex(destinationIndex).intValue = cachedValues[sourceIndex];
+            }
+        }
+    }
+
+    private void ResizeAnnotationNumberArray(SerializedProperty annotationNumberFlat,int oldBoardSize,int newBoardSize)
+    {
+        int[] cachedValues = new int[annotationNumberFlat.arraySize];
+        for (int i = 0; i < annotationNumberFlat.arraySize; i++)
+            cachedValues[i] = Mathf.Max(0,annotationNumberFlat.GetArrayElementAtIndex(i).intValue);
+
+        int normalizedOldBoardSize = oldBoardSize > 0 ? GoLessonBoardJsonUtility.ClampBoardSize(oldBoardSize) : 0;
+        int normalizedNewBoardSize = GoLessonBoardJsonUtility.ClampBoardSize(newBoardSize);
+        int copySize = normalizedOldBoardSize > 0 ? Mathf.Min(normalizedOldBoardSize,normalizedNewBoardSize) : 0;
+
+        annotationNumberFlat.arraySize = normalizedNewBoardSize * normalizedNewBoardSize;
+        for (int i = 0; i < annotationNumberFlat.arraySize; i++)
+            annotationNumberFlat.GetArrayElementAtIndex(i).intValue = 0;
+
+        for (int y = 0; y < copySize; y++)
+        {
+            for (int x = 0; x < copySize; x++)
+            {
+                int sourceIndex = y * normalizedOldBoardSize + x;
+                if (sourceIndex < 0 || sourceIndex >= cachedValues.Length)
+                    continue;
+
+                int destinationIndex = y * normalizedNewBoardSize + x;
+                annotationNumberFlat.GetArrayElementAtIndex(destinationIndex).intValue = cachedValues[sourceIndex];
+            }
+        }
+    }
+
+    private void ClampAnnotationArrayValues(SerializedProperty annotationTypeFlat,SerializedProperty annotationNumberFlat)
+    {
+        int count = Mathf.Min(annotationTypeFlat.arraySize,annotationNumberFlat.arraySize);
+        for (int i = 0; i < count; i++)
+        {
+            SerializedProperty typeCell = annotationTypeFlat.GetArrayElementAtIndex(i);
+            SerializedProperty numberCell = annotationNumberFlat.GetArrayElementAtIndex(i);
+            int clampedType = GoLessonBoardJsonUtility.ClampAnnotationType(typeCell.intValue);
+            typeCell.intValue = clampedType;
+            numberCell.intValue = clampedType == (int)GoLessonInlineAnnotationType.Number
+                ? Mathf.Max(0,numberCell.intValue)
+                : 0;
+        }
+    }
+
     private int GuessBoardSizeFromArraySize(int arraySize,int fallbackSize)
     {
         int roundedBoardSize = Mathf.RoundToInt(Mathf.Sqrt(arraySize));
@@ -494,10 +668,68 @@ public class GoLessonBuilderWindow : EditorWindow
     {
         return boardValue switch
         {
-            1 => "B",
-            2 => "W",
-            _ => "."
+            1 => "●",
+            2 => "○",
+            _ => "·"
         };
+    }
+
+    private string GetAnnotationLabel(int annotationType,int annotationNumber)
+    {
+        return annotationType switch
+        {
+            (int)GoLessonInlineAnnotationType.Number => annotationNumber.ToString(),
+            (int)GoLessonInlineAnnotationType.Triangle => "▲",
+            (int)GoLessonInlineAnnotationType.Square => "■",
+            _ => "·"
+        };
+    }
+
+    private void ApplyAnnotationBrushToCell(SerializedProperty typeCell,SerializedProperty numberCell,int currentType,int currentNumber)
+    {
+        int brushType = (int)inlineAnnotationPaintTool;
+        if (brushType == (int)GoLessonInlineAnnotationType.None)
+        {
+            typeCell.intValue = 0;
+            numberCell.intValue = 0;
+            return;
+        }
+
+        if (brushType == (int)GoLessonInlineAnnotationType.Number)
+        {
+            int paintValue = Mathf.Max(0,inlineAnnotationPaintNumber);
+            bool shouldClear = currentType == brushType && currentNumber == paintValue;
+            typeCell.intValue = shouldClear ? 0 : brushType;
+            numberCell.intValue = shouldClear ? 0 : paintValue;
+            return;
+        }
+
+        bool toggleOff = currentType == brushType;
+        typeCell.intValue = toggleOff ? 0 : brushType;
+        numberCell.intValue = 0;
+    }
+
+    private void ClearAllAnnotations(SerializedProperty annotationTypeFlat,SerializedProperty annotationNumberFlat)
+    {
+        int count = Mathf.Min(annotationTypeFlat.arraySize,annotationNumberFlat.arraySize);
+        for (int i = 0; i < count; i++)
+        {
+            annotationTypeFlat.GetArrayElementAtIndex(i).intValue = 0;
+            annotationNumberFlat.GetArrayElementAtIndex(i).intValue = 0;
+        }
+    }
+
+    private int GetInlineAnnotationCount(SerializedProperty annotationTypeFlat)
+    {
+        int count = 0;
+        for (int i = 0; i < annotationTypeFlat.arraySize; i++)
+        {
+            int annotationType = GoLessonBoardJsonUtility.ClampAnnotationType(annotationTypeFlat.GetArrayElementAtIndex(i).intValue);
+            if (annotationType != (int)GoLessonInlineAnnotationType.None)
+                count++;
+        }
+
+        return count;
     }
 
     private bool GetSlideFoldoutState(string foldoutKey)
@@ -566,11 +798,13 @@ public class GoLessonBuilderWindow : EditorWindow
         slideProperty.FindPropertyRelative(SlideNameProperty).stringValue = $"Slide {slideIndex + 1}";
         slideProperty.FindPropertyRelative(SlideTypeProperty).enumValueIndex = (int)GoLessonSlideType.Content;
         slideProperty.FindPropertyRelative(SlideBodyTextProperty).stringValue = string.Empty;
-        slideProperty.FindPropertyRelative(SlideBoardSourceProperty).enumValueIndex = (int)GoLessonSlideBoardSource.JsonFile;
+        slideProperty.FindPropertyRelative(SlideBoardSourceProperty).enumValueIndex = (int)GoLessonSlideBoardSource.InlineGrid;
         slideProperty.FindPropertyRelative(SlideBoardJsonProperty).objectReferenceValue = null;
         slideProperty.FindPropertyRelative(SlideInlineBoardSizeProperty).intValue = GoLessonBoardJsonUtility.DefaultBoardSize;
         slideProperty.FindPropertyRelative(SlideInlineCurrentPlayerProperty).intValue = 1;
         ResizeBoardArray(slideProperty.FindPropertyRelative(SlideInlineBoardFlatProperty),0,GoLessonBoardJsonUtility.DefaultBoardSize);
+        ResizeAnnotationTypeArray(slideProperty.FindPropertyRelative(SlideInlineAnnotationTypeFlatProperty),0,GoLessonBoardJsonUtility.DefaultBoardSize);
+        ResizeAnnotationNumberArray(slideProperty.FindPropertyRelative(SlideInlineAnnotationNumberFlatProperty),0,GoLessonBoardJsonUtility.DefaultBoardSize);
         slideProperty.FindPropertyRelative(SlideCorrectYesProperty).boolValue = true;
         slideProperty.FindPropertyRelative(SlideCorrectNumberProperty).intValue = 0;
     }

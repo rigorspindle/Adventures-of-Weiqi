@@ -57,6 +57,7 @@ public class CubeGrid : MonoBehaviour
     [SerializeField] private CaptureManager captureManager; // Reference to CaptureManager
     [SerializeField] private GameManager gameManager;
     [SerializeField] private ConditionManager conditionManager; // Reference to ConditionManager
+    [SerializeField] private GoBoardAnnotationController boardAnnotationController;
 
     public List<string> illegalMoves = new List<string>(); // Public list of illegal moves as strings
 
@@ -96,6 +97,7 @@ public class CubeGrid : MonoBehaviour
         gameManager = GameObject.FindGameObjectWithTag("GameManager")?.GetComponent<GameManager>();
         captureManager = FindObjectOfType<CaptureManager>();
         conditionManager = FindObjectOfType<ConditionManager>();
+        ResolveBoardAnnotationController();
 
         captureManager?.RefreshFromCubeGrid();
 
@@ -139,6 +141,7 @@ public class CubeGrid : MonoBehaviour
             gameManager = GameObject.FindGameObjectWithTag("GameManager")?.GetComponent<GameManager>();
         if (conditionManager == null)
             conditionManager = FindObjectOfType<ConditionManager>();
+        ResolveBoardAnnotationController();
 
         captureManager?.RefreshFromCubeGrid();
         InitializeGrid();
@@ -224,6 +227,28 @@ public class CubeGrid : MonoBehaviour
             Debug.Log($"Grid initialized at {gridOrigin} with size: {gridSize}x{gridSize}");
 
         OnGridInitialized?.Invoke();
+        ApplySerializedAnnotationsToBoard();
+    }
+
+    private void ResolveBoardAnnotationController ()
+    {
+        if (boardAnnotationController == null)
+            boardAnnotationController = FindObjectOfType<GoBoardAnnotationController>();
+    }
+
+    private void ApplySerializedAnnotationsToBoard ()
+    {
+        if (currentPuzzleData == null || currentPuzzleData.annotations == null || currentPuzzleData.annotations.Count == 0)
+            return;
+
+        ResolveBoardAnnotationController();
+        if (boardAnnotationController == null)
+        {
+            Debug.LogWarning("CubeGrid: Puzzle data contains annotations, but no GoBoardAnnotationController was found in the scene.");
+            return;
+        }
+
+        boardAnnotationController.ApplySerializedAnnotations(currentPuzzleData.annotations);
     }
 
     private void ApplyBoardVisualForCurrentGridSize ()
@@ -1041,6 +1066,7 @@ public class CubeGrid : MonoBehaviour
         public int boardSize;
         public int[] boardFlat;
         public List<Move> moves;
+        public List<AnnotationData> annotations;
 
         public int[,] ToArray ()
         {
@@ -1058,5 +1084,14 @@ public class CubeGrid : MonoBehaviour
         public string playerMove;
         public string aiMove;
         public bool isKoMove;
+    }
+
+    [System.Serializable]
+    public class AnnotationData
+    {
+        public int row;
+        public int col;
+        public int annotationType;
+        public int numberValue;
     }
 }
